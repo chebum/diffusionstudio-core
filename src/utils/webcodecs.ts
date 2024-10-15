@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2024 The Diffusion Studio Authors
  *
- * This Source Code Form is subject to the terms of the Mozilla 
+ * This Source Code Form is subject to the terms of the Mozilla
  * Public License, v. 2.0 that can be found in the LICENSE file.
  */
 
@@ -36,20 +36,17 @@ export async function getVideoEncoderConfigs(settings: VideoSettings): Promise<V
 		'avc1.42001E',
 		// TODO: 'hev1.1.6.L93.B0', 'hev1.2.4.L93.B0', 'vp09.00.10.08', 'av01.0.04M.08', 'vp8',
 	];
-	const accelerations = ['prefer-hardware', 'prefer-software'] as const;
 
 	const configs: VideoEncoderConfig[] = [];
 	for (const codec of codecs) {
-		for (const acceleration of accelerations) {
-			configs.push({
-				codec,
-				hardwareAcceleration: acceleration,
-				width: width,
-				height: height,
-				bitrate,
-				framerate: fps,
-			});
-		}
+		configs.push({
+			codec,
+			hardwareAcceleration: 'no-preference',
+			width: width,
+			height: height,
+			bitrate,
+			framerate: fps,
+		});
 	}
 
 	const supported: VideoEncoderConfig[] = [];
@@ -63,7 +60,7 @@ export async function getVideoEncoderConfigs(settings: VideoSettings): Promise<V
 		if (support.supported) supported.push(support.config ?? config);
 	}
 
-	return supported.sort(sortHardwareAcceleration);
+	return supported;
 }
 
 /**
@@ -114,15 +111,4 @@ export async function getSupportedEncoderConfigs(settings: {
 	}
 
 	return [video[0], audio[0]];
-}
-
-/**
- * Config sort function that prioritizes hardware acceleration
- */
-export function sortHardwareAcceleration(a: VideoEncoderConfig, b: VideoEncoderConfig): number {
-	const aHa = a.hardwareAcceleration ?? '';
-	const bHa = b.hardwareAcceleration ?? '';
-	if (aHa < bHa) return -1;
-	if (aHa > bHa) return 1;
-	return 0;
 }
