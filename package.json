@@ -1,5 +1,5 @@
 {
-  "name": "@diffusionstudio/core",
+  "name": "@chebum/diffusionstudio-core",
   "private": false,
   "version": "1.0.0-rc.8",
   "type": "module",
@@ -54,11 +54,11 @@
   },
   "author": "Diffusion Studio GmbH",
   "publishConfig": {
-    "access": "public"
+    "@chebum:registry": "https://npm.pkg.github.com"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:diffusionstudio/core.git"
+    "url": "git+ssh://git@github.com/chebum/diffusionstudio-core.git"
   },
   "keywords": [
     "mp4",
