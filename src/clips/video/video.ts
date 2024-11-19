@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2024 The Diffusion Studio Authors
  *
- * This Source Code Form is subject to the terms of the Mozilla 
+ * This Source Code Form is subject to the terms of the Mozilla
  * Public License, v. 2.0 that can be found in the LICENSE file.
  */
 
@@ -180,11 +180,22 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 		const frame = await this.buffer.dequeue();
 		if (!frame) return;
 
-		this.canvas.width = frame.displayWidth;
-		this.canvas.height = frame.displayHeight;
-
-		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		this.context.drawImage(frame, 0, 0);
+		const settings = this.track?.composition?.settings;
+		if (settings?.width == frame.displayHeight && settings?.height == frame.displayWidth) {
+			// Rotate frame, if necessary
+			// noinspection JSSuspiciousNameCombination
+			this.canvas.width = frame.displayHeight;
+			// noinspection JSSuspiciousNameCombination
+			this.canvas.height = frame.displayWidth;
+			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			this.context.setTransform(0, 1, -1, 0, this.canvas.width, 0); // overwrite existing transform
+			this.context.drawImage(frame, 0, 0);
+		} else {
+			this.canvas.width = frame.displayWidth;
+			this.canvas.height = frame.displayHeight;
+			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			this.context.drawImage(frame, 0, 0);
+		}
 		this.textrues.canvas.source.update();
 
 		frame.close();
