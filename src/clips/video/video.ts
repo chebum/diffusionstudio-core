@@ -51,7 +51,7 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 		this.element.controls = false;
 		this.element.playsInline = true;
 		this.element.style.display = 'hidden';
-		this.element.crossOrigin = "anonymous";
+		this.element.crossOrigin = 'anonymous';
 
 		(this.textrues.html5.source as any).autoPlay = false;
 		(this.textrues.html5.source as any).loop = false;
@@ -87,7 +87,7 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 
 				this.state = 'READY';
 				resolve();
-			}
+			};
 
 			this.element.onerror = () => {
 				this.state = 'ERROR';
@@ -98,7 +98,7 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 				});
 
 				reject(this.element.error ?? error);
-			}
+			};
 		});
 	}
 
@@ -108,6 +108,13 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 		// without seeking the first frame a black frame will be rendered
 		const frame = track.composition?.frame ?? 0;
 		await this.seek(Timestamp.fromFrames(frame));
+	}
+
+	public enter() {
+		super.enter();
+		if (this.track?.composition?.rendering && this.buffer?.state != 'active') {
+			this.decodeVideo();
+		}
 	}
 
 	@visualize
@@ -125,7 +132,7 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 	public exit(): void {
 		if (this.playing) {
 			this.element.pause();
-		};
+		}
 		if (this.filters && this.view.filters) {
 			this.view.filters = null as any;
 		}
@@ -137,17 +144,6 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 		clip.source = this.source;
 
 		return clip;
-	}
-
-	public async seek(time: Timestamp): Promise<void> {
-		if (this.track?.composition?.rendering) {
-			const buffer = await this.decodeVideo();
-			return new Promise<void>((resolve) => {
-				buffer.onenqueue = () => resolve();
-			});
-		}
-
-		return super.seek(time);
 	}
 
 	private async decodeVideo() {

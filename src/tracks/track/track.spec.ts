@@ -57,6 +57,54 @@ describe('The Track Object', () => {
 		expect(track.clips.at(2)?.stop.frames).toBe(12);
 	});
 
+	it('should be able to add clips at an index, if stacked', async () => {
+		track.stacked();
+
+		await track.add(new Clip({ stop: 10, start: 0 }));
+		await track.add(new Clip({ stop: 10, start: 0 }));
+		await track.add(new Clip({ stop: 10, start: 0 }));
+
+		expect(track.clips.length).toBe(3);
+		expect(track.start.frames).toBe(0);
+		expect(track.stop.frames).toBe(30);
+
+		await track.add(new Clip({ stop: 2, start: 0 }), 1);
+
+		expect(track.clips[0].start.frames).toBe(0);
+		expect(track.clips[0].stop.frames).toBe(10);
+
+		expect(track.clips[1].start.frames).toBe(10);
+		expect(track.clips[1].stop.frames).toBe(12);
+
+		expect(track.clips[2].start.frames).toBe(12);
+		expect(track.clips[2].stop.frames).toBe(22);
+
+		await track.add(new Clip({ stop: 15, start: 10 }), 4);
+
+		expect(track.clips[0].start.frames).toBe(0);
+		expect(track.clips[0].stop.frames).toBe(10);
+		
+		expect(track.clips[4].start.frames).toBe(32);
+		expect(track.clips[4].stop.frames).toBe(37);
+
+		await track.clips[0].split(5);
+
+		expect(track.clips[0].start.frames).toBe(0);
+		expect(track.clips[0].stop.frames).toBe(5);
+
+		expect(track.clips[1].start.frames).toBe(5);
+		expect(track.clips[1].stop.frames).toBe(10);
+
+		await track.add(new Clip({ stop: 17, start: 3, name: 'abc' }), 0);
+
+		expect(track.clips[0].start.frames).toBe(0);
+		expect(track.clips[0].stop.frames).toBe(14);
+		expect(track.clips[0].name).toBe('abc');
+
+		expect(track.clips[1].start.frames).toBe(14);
+		expect(track.clips[1].stop.frames).toBe(19);
+	});
+
 	it('should snap the clip when it overlaps with the end of another clip', async () => {
 		const clip0 = new Clip({ stop: 20, start: 0 });
 		const clip1 = new Clip({ stop: 30, start: 11 });
@@ -447,6 +495,32 @@ describe('The Track Object', () => {
 		expect(enterFn).toHaveBeenCalledTimes(1);
 		expect(updateFn).toHaveBeenCalledTimes(1);
 		expect(exitFn).toHaveBeenCalledTimes(1);
+	});
+
+	it('should remove the visible clip when disabled changes', async () => {
+		const clip = await track.add(new Clip());
+
+		const exitSpy = vi.spyOn(clip, 'exit');
+		const computeFrameSpy = vi.spyOn(comp, 'computeFrame');
+		expect(updateMock).toBeCalledTimes(0);
+		expect(computeFrameSpy).toBeCalledTimes(0);
+		expect(track.disabled).toBe(false);
+		expect(track.view.children.length).toBe(1);
+
+		track.disabled = true;
+
+		expect(updateMock).toBeCalledTimes(1);
+		expect(computeFrameSpy).toBeCalledTimes(1);
+		expect(exitSpy).toBeCalledTimes(1);
+		expect(track.view.children.length).toBe(0);
+		expect(track.disabled).toBe(true);
+
+		track.disabled = false;
+
+		expect(updateMock).toBeCalledTimes(2);
+		expect(computeFrameSpy).toBeCalledTimes(2);
+		expect(track.view.children.length).toBe(1);
+		expect(track.disabled).toBe(false);
 	});
 });
 

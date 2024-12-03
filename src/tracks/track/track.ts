@@ -26,11 +26,9 @@ type Events = {
 }
 
 export class Track<Clp extends Clip> extends EventEmitterMixin<Events, typeof Serializer>(Serializer) {
+	private _disabled: boolean = false;
+
 	public view = new Container();
-	/**
-	 * Controls the visability of the track
-	 */
-	public disabled: boolean = false;
 
 	/**
 	 * The clips to be displayed
@@ -56,6 +54,24 @@ export class Track<Clp extends Clip> extends EventEmitterMixin<Events, typeof Se
 	 * Controls how the clips should be inserted and updated
 	 */
 	public strategy: InsertStrategy<InsertMode> = new DefaultInsertStrategy();
+
+	/**
+	 * Controls the visability of the track
+	 */
+	public get disabled(): boolean {
+		return this._disabled;
+	}
+
+	public set disabled(value: boolean) {
+		if (value && this.clipRef && inGraph(this.clipRef)) {
+			this.view.removeChild(this.clipRef.view);
+			this.clipRef?.exit();
+		}
+
+		this._disabled = value;
+
+		this.trigger('update', undefined);
+	}
 
 	/**
 	 * Connect the track with the composition
@@ -174,9 +190,11 @@ export class Track<Clp extends Clip> extends EventEmitterMixin<Events, typeof Se
 
 	/**
 	 * Adds a new clip to the track
+	 * @param clip The clip to add
+	 * @param index The index to insert the clip at, will be ignored if track is not stacked
 	 * @throws Error if the clip can't be added
 	 */
-	public async add(clip: Clp): Promise<Clp> {
+	public async add(clip: Clp, index?: number): Promise<Clp> {
 		// only append clip if composition is initialized
 		if (this.composition && !this.composition.renderer) {
 			await new Promise(this.composition.resolve('init'));
@@ -184,7 +202,7 @@ export class Track<Clp extends Clip> extends EventEmitterMixin<Events, typeof Se
 
 		await clip.init();
 		await clip.connect(this);
-		await this.strategy.add(clip, this);
+		await this.strategy.add(clip, this, index);
 
 		clip.on('frame', () => {
 			this.strategy.update(clip, this);
@@ -215,6 +233,7 @@ export class Track<Clp extends Clip> extends EventEmitterMixin<Events, typeof Se
 			this.clips.splice(index, 1);
 			this.strategy.update(clip, this);
 			this.trigger('detach', undefined);
+			clip.off('*');
 
 			return clip;
 		}

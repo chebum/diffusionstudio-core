@@ -17,12 +17,16 @@ import type { Captions } from '../types';
 import type { Serializer } from '../services';
 
 export class Transcript implements Serializer {
-	public readonly id = crypto.randomUUID();
+	public id = crypto.randomUUID();
 	public language: Language = Language.en;
 	public groups: WordGroup[] = [];
 
 	public get text(): string {
 		return this.groups.map(({ text }) => text).join(' ');
+	}
+
+	public get words(): Word[] {
+		return this.groups.flatMap(({ words }) => words);
 	}
 
 	public constructor(groups: WordGroup[] = [], language = Language.en) {

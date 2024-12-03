@@ -10,11 +10,12 @@ import { BlurFilter } from 'pixi.js';
 import { Source, VideoSource } from '../../sources';
 import { VideoClip } from './video';
 import { Composition } from '../../composition';
-import { Keyframe, Timestamp } from '../../models';
+import { Keyframe, Timestamp, Transcript } from '../../models';
 import { sleep } from '../../utils';
 import { FrameBuffer } from './buffer';
 
 import type { MockInstance } from 'vitest';
+import { captions } from '../../test/captions';
 
 
 const file = new File([], 'video.mp4', { type: 'video/mp4' });
@@ -264,6 +265,10 @@ describe('The Video Clip', () => {
 		const composition = new Composition();
 		await composition.add(clip);
 
+		composition.computeFrame();
+
+		expect(clip.track?.view.children.length).toBe(1);
+
 		const buffer = new FrameBuffer();
 
 		Object.defineProperty(buffer, 'onenqueue', {
@@ -274,8 +279,13 @@ describe('The Video Clip', () => {
 		const decodeSpy = vi.spyOn(clip, 'decodeVideo').mockReturnValueOnce(buffer);
 		composition.state = 'RENDER';
 
-		await clip.seek(new Timestamp());
+		await composition.seek(0);
 
+		expect(clip.track?.view.children.length).toBe(0);
+
+		await composition.computeFrame();
+
+		expect(clip.track?.view.children.length).toBe(1);
 		expect(decodeSpy).toBeCalledTimes(1);
 		expect(seekFn.mock.calls[0][0]).toBe(0);
 	});
@@ -337,6 +347,7 @@ describe('Copying the VidoClip', () => {
 		clip.duration.frames = 100;
 		clip.muted = true;
 		clip.volume = 0.2;
+		clip.transcript = Transcript.fromJSON(captions);
 
 		const copy = clip.copy();
 
@@ -349,6 +360,7 @@ describe('Copying the VidoClip', () => {
 		expect(copy.muted).toBe(true);
 		expect(copy.source).toBeInstanceOf(VideoSource);
 		expect(copy.source.id).toBe(clip.source.id);
+		expect(copy.transcript?.id).toBe(clip.transcript.id);
 	});
 
 	it('should transfer visual properties', async () => {

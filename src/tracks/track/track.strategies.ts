@@ -62,18 +62,26 @@ export class DefaultInsertStrategy implements InsertStrategy<'DEFAULT'> {
 export class StackInsertStrategy implements InsertStrategy<'STACK'> {
 	public mode = insertModes[1];
 
-	public add(clip: Clip, track: Track<Clip>): void {
-		// fallback is -1 because one frame will be added
-		const stop = track.clips.at(-1)?.stop.millis ?? -1;
-		const offset = stop - clip.start.millis + 1;
+	public add(clip: Clip, track: Track<Clip>, index: number | undefined = undefined): void {
+		let stop = -1;
 
-		clip.offsetBy(new Timestamp(offset));
-		track.clips.push(clip);
+		if (index != undefined && index > 0 || index == undefined) {
+			stop = track.clips.at((index ?? 0) - 1)?.stop.millis ?? -1;
+		}
+
+		clip.offsetBy(new Timestamp(stop - clip.start.millis + 1));
+
+		if (index == undefined) {
+			track.clips.push(clip);
+		} else {
+			track.clips.splice(index, 0, clip);
+			track.clips.slice(index + 1).forEach((c) => {
+				c.offsetBy(clip.stop.subtract(clip.start));
+			});
+		}
 	}
 
 	public update(_: Clip, track: Track<Clip>): void {
-		track.clips.sort(startAsc);
-
 		let start = 0;
 
 		for (const clip of track.clips) {

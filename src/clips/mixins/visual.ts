@@ -13,7 +13,7 @@ import { Keyframe } from '../../models';
 import { Sprite } from 'pixi.js';
 
 import type { Serializer } from '../../services';
-import type { Container, Filter } from 'pixi.js';
+import type { Container, Filter, Graphics } from 'pixi.js';
 import type { Constructor, float, int, Anchor, Position, Scale, Translate2D, Percent, NumberCallback } from '../../types';
 
 type BaseClass = { view: Container } & Serializer;
@@ -171,6 +171,17 @@ export function VisualMixin<T extends Constructor<BaseClass>>(Base: T) {
 
 		public set width(value: Keyframe<int> | Percent | int | NumberCallback) {
 			this._width = value;
+		}
+
+		/**
+		 * The mask to apply to the clip
+		 */
+		public get mask(): Graphics | undefined {
+			return this.view.mask as Graphics | undefined;
+		}
+
+		public set mask(value: Graphics | undefined) {
+			this.view.mask = value ?? null;
 		}
 
 		/**

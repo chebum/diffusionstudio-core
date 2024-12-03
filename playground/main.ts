@@ -20,6 +20,16 @@ const video = await composition.add(
     .offsetBy(30)
 );
 
+const mask = new core.CircleMask({
+  radius: 1080/2,
+  position: {
+    x: 1920 / 2,
+    y: 1080 / 2,
+  },
+});
+
+video.mask = mask;
+
 video.animate()
   .alpha(0.5).to(1, 120).to(0.5, 120).to(1, 60)
   .scale(0.1, 0, 'easeIn').to(1, 30)
@@ -31,6 +41,16 @@ const image = await composition.add(
     height: 600,
   })
 );
+
+const audioTrack = composition.createTrack('audio').stacked(true);
+const audioSource = await core.AudioSource.from('/harvard.MP3');
+await audioTrack.add(
+  await new core.AudioClip(audioSource)
+);
+await audioTrack.removeSilences({
+  minDuration: 300,
+  windowSize: 1,
+});
 
 image.animate()
   .rotation(-16).to(14, 5).to(-7, 10).to(24, 7).to(-3, 9).to(19, 7).to(-14, 12).to(5, 9).to(-30, 13)
@@ -51,6 +71,7 @@ await composition.add(
 
 (await composition.add(
   new core.AudioClip(await core.AudioSource.from('/audio.mp3'), {
+    muted: true,
     transcript: core.Transcript.fromJSON(captions).optimize(),
   })
 )).addCaptions();

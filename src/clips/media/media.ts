@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2024 The Diffusion Studio Authors
  *
- * This Source Code Form is subject to the terms of the Mozilla 
+ * This Source Code Form is subject to the terms of the Mozilla
  * Public License, v. 2.0 that can be found in the LICENSE file.
  */
 
 import { Timestamp, Transcript } from '../../models';
 import { AudioSource } from '../../sources';
 import { RangeDeserializer } from './media.deserializer';
-import { serializable, } from '../../services';
+import { serializable } from '../../services';
 import { replaceKeyframes } from '../clip/clip.utils';
 import { ReferenceError, ValidationError } from '../../errors';
 import { Clip } from '../clip';
@@ -17,9 +17,8 @@ import type { CaptionPresetStrategy, CaptionTrack } from '../../tracks';
 import type { float, frame } from '../../types';
 import type { MediaClipProps } from './media.interfaces';
 
-
 export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Clip<MediaClipProps> {
-	public readonly source = new AudioSource();
+	public source = new AudioSource();
 	public declare element?: HTMLAudioElement | HTMLVideoElement;
 
 	@serializable(Timestamp)
@@ -42,16 +41,22 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 	@serializable(RangeDeserializer)
 	public range: [Timestamp, Timestamp] = [new Timestamp(), this.duration];
 
-	/**
-	 * Defines the transcript of the video/audio
-	 */
-	@serializable(Transcript)
-	public transcript?: Transcript;
-
 	public constructor(props: MediaClipProps = {}) {
 		super();
 
 		Object.assign(this, props);
+	}
+
+	/**
+	 * Defines the transcript of the video/audio
+	 */
+	@serializable(Transcript)
+	public get transcript(): Transcript | undefined {
+		return this.source.transcript;
+	}
+
+	public set transcript(transcript: Transcript | undefined) {
+		this.source.transcript = transcript;
 	}
 
 	public get start(): Timestamp {
@@ -164,10 +169,12 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 	public seek(time: Timestamp): Promise<void> {
 		return new Promise((resolve, reject) => {
 			if (!this.element) {
-				return reject(new ReferenceError({
-					code: 'elementNotDefined',
-					message: 'Cannot seek on undefined element',
-				}));
+				return reject(
+					new ReferenceError({
+						code: 'elementNotDefined',
+						message: 'Cannot seek on undefined element',
+					}),
+				);
 			}
 			if (time.millis < this.start.millis || time.millis > this.stop.millis) {
 				time = this.start;
@@ -199,7 +206,7 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 		if (start.millis >= stop.millis) {
 			throw new ValidationError({
 				code: 'invalidKeyframe',
-				message: "Start can't lower than or equal the stop"
+				message: "Start can't lower than or equal the stop",
 			});
 		}
 		// start and/or stop are out of bounds
@@ -233,7 +240,9 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 	}
 
 	public copy(): MediaClip {
-		return MediaClip.fromJSON(JSON.parse(JSON.stringify(this)));
+		const clip = MediaClip.fromJSON(JSON.parse(JSON.stringify(this)));
+		clip.source = this.source;
+		return clip;
 	}
 
 	public async split(time?: frame | Timestamp): Promise<this> {
@@ -267,7 +276,8 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 
 		replaceKeyframes(copy, copy.start.subtract(this.start));
 
-		await this.track.add(copy);
+		const index = this.track.clips.findIndex((c) => c.id == this.id);
+		await this.track.add(copy, index + 1);
 
 		return copy;
 	}
@@ -276,7 +286,9 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 	 * Generates a new caption track for the current clip using the specified captioning strategy.
 	 * @param strategy An optional CaptionPresetStrategy to define how captions should be generated.
 	 */
-	public async addCaptions(strategy?: CaptionPresetStrategy | (new () => CaptionPresetStrategy)): Promise<CaptionTrack> {
+	public async addCaptions(
+		strategy?: CaptionPresetStrategy | (new () => CaptionPresetStrategy),
+	): Promise<CaptionTrack> {
 		if (!this.track?.composition) {
 			throw new ValidationError({
 				code: 'compositionNotDefined',
@@ -284,10 +296,7 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 			});
 		}
 
-		const track = await this.track.composition
-			.createTrack('caption')
-			.from(this)
-			.generate(strategy);
+		const track = await this.track.composition.createTrack('caption').from(this).generate(strategy);
 
 		return track;
 	}
@@ -299,7 +308,9 @@ export class MediaClip<Props extends MediaClipProps = MediaClipProps> extends Cl
 	/**
 	 * @deprecated use `addCaptions` instead
 	 */
-	public async generateCaptions(strategy?: CaptionPresetStrategy | (new () => CaptionPresetStrategy)) {
+	public async generateCaptions(
+		strategy?: CaptionPresetStrategy | (new () => CaptionPresetStrategy),
+	) {
 		return this.addCaptions(strategy);
 	}
 }
