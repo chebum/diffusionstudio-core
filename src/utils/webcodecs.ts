@@ -5,19 +5,19 @@
  * Public License, v. 2.0 that can be found in the LICENSE file.
  */
 
-import { EncoderError } from "../errors";
+import {EncoderError} from "../errors";
 
 type VideoSettings = {
-	height: number;
-	width: number;
-	fps: number;
-	bitrate: number;
+    height: number;
+    width: number;
+    fps: number;
+    bitrate: number;
 }
 
 type AudioSettings = {
-	sampleRate: number,
-	numberOfChannels: number,
-	bitrate: number,
+    sampleRate: number,
+    numberOfChannels: number,
+    bitrate: number,
 }
 
 /**
@@ -25,71 +25,75 @@ type AudioSettings = {
  * configurations
  */
 export async function getVideoEncoderConfigs(settings: VideoSettings): Promise<VideoEncoderConfig[]> {
-	const { fps, height, width, bitrate } = settings;
-	// https://cconcolato.github.io/media-mime-support/#video
-	const codecs = [
-		'avc1.640034',
-		'avc1.4d0034',
-		'avc1.640028',
-		'avc1.640C32',
-		'avc1.64001f',
-		'avc1.42001E',
-		// TODO: 'hev1.1.6.L93.B0', 'hev1.2.4.L93.B0', 'vp09.00.10.08', 'av01.0.04M.08', 'vp8',
-	];
+    const {fps, height, width, bitrate} = settings;
+    // https://cconcolato.github.io/media-mime-support/#video
+    const codecs = [
+        'avc1.640034',
+        'avc1.4d0034',
+        'avc1.640028',
+        'avc1.640C32',
+        'avc1.64001f',
+        'avc1.42001E',
+        // TODO: 'hev1.1.6.L93.B0', 'hev1.2.4.L93.B0', 'vp09.00.10.08', 'av01.0.04M.08', 'vp8',
+    ];
 
-	const configs: VideoEncoderConfig[] = [];
-	for (const codec of codecs) {
-		configs.push({
-			codec,
-			hardwareAcceleration: 'no-preference',
-			width: width,
-			height: height,
-			bitrate,
-			framerate: fps,
-		});
-	}
+    const accelerations: HardwareAcceleration[] = ['prefer-hardware', 'no-preference'];
 
-	const supported: VideoEncoderConfig[] = [];
+    const configs: VideoEncoderConfig[] = [];
+    for (const acceleration of accelerations) {
+        for (const codec of codecs) {
+            configs.push({
+                codec,
+                hardwareAcceleration: acceleration,
+                width: width,
+                height: height,
+                bitrate,
+                framerate: fps,
+            });
+        }
+    }
 
-	if (!('VideoEncoder' in window)) {
-		return supported;
-	}
+    const supported: VideoEncoderConfig[] = [];
 
-	for (const config of configs) {
-		const support = await VideoEncoder.isConfigSupported(config);
-		if (support.supported) supported.push(support.config ?? config);
-	}
+    if (!('VideoEncoder' in window)) {
+        return supported;
+    }
 
-	return supported;
+    for (const config of configs) {
+        const support = await VideoEncoder.isConfigSupported(config);
+        if (support.supported) supported.push(support.config ?? config);
+    }
+
+    return supported;
 }
 
 /**
  * Function for retrieving supported audio encoder configurations
  */
 export async function getAudioEncoderConfigs(settings: AudioSettings): Promise<AudioEncoderConfig[]> {
-	const { sampleRate, numberOfChannels, bitrate } = settings;
+    const {sampleRate, numberOfChannels, bitrate} = settings;
 
-	const codecs = ['mp4a.40.2', 'opus'];
-	const supported: AudioEncoderConfig[] = [];
+    const codecs = ['mp4a.40.2', 'opus'];
+    const supported: AudioEncoderConfig[] = [];
 
-	if (!('AudioEncoder' in window)) {
-		return supported;
-	}
+    if (!('AudioEncoder' in window)) {
+        return supported;
+    }
 
-	for (const codec of codecs) {
-		const support = await AudioEncoder.isConfigSupported({
-			codec,
-			numberOfChannels,
-			bitrate,
-			sampleRate,
-		});
+    for (const codec of codecs) {
+        const support = await AudioEncoder.isConfigSupported({
+            codec,
+            numberOfChannels,
+            bitrate,
+            sampleRate,
+        });
 
-		if (support.supported) {
-			supported.push(support.config);
-		}
-	}
+        if (support.supported) {
+            supported.push(support.config);
+        }
+    }
 
-	return supported;
+    return supported;
 }
 
 /**
@@ -97,18 +101,18 @@ export async function getAudioEncoderConfigs(settings: AudioSettings): Promise<A
  * and video profiles
  */
 export async function getSupportedEncoderConfigs(settings: {
-	audio: AudioSettings,
-	video: VideoSettings
+    audio: AudioSettings,
+    video: VideoSettings
 }): Promise<[VideoEncoderConfig, AudioEncoderConfig | undefined]> {
-	const audio = await getAudioEncoderConfigs(settings.audio);
-	const video = await getVideoEncoderConfigs(settings.video);
+    const audio = await getAudioEncoderConfigs(settings.audio);
+    const video = await getVideoEncoderConfigs(settings.video);
 
-	if (!video.length) {
-		throw new EncoderError({
-			message: "Encoder can't be configured with any of the tested codecs",
-			code: 'codecsNotSupported',
-		});
-	}
+    if (!video.length) {
+        throw new EncoderError({
+            message: "Encoder can't be configured with any of the tested codecs",
+            code: 'codecsNotSupported',
+        });
+    }
 
-	return [video[0], audio[0]];
+    return [video[0], audio[0]];
 }
