@@ -177,7 +177,10 @@ export class VideoClip extends VisualMixin(MediaClip<VideoClipProps>) {
 		if (!frame) return;
 
 		const settings = this.track?.composition?.settings;
-		if (settings?.width == frame.displayHeight && settings?.height == frame.displayWidth) {
+		if (settings?.width != settings?.height
+			&& settings?.width == frame.displayHeight
+			&& settings?.height == frame.displayWidth) {
+
 			// Rotate frame, if necessary
 			// noinspection JSSuspiciousNameCombination
 			this.canvas.width = frame.displayHeight;
